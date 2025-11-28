@@ -1,6 +1,7 @@
 import "dotenv/config"
 import {Client, GatewayIntentBits, Events, ClientUser} from 'discord.js';
 import { configDotenv } from "dotenv";
+import { useRoute } from "./Routers/CommandRouter.js";
 
 configDotenv({ path: '../.env' });
 
@@ -15,13 +16,10 @@ client.on(Events.ClientReady, () => {
 });
 
 client.on(Events.MessageCreate, async message => {
-  console.log("Message received");
   
   if (message.author.bot) return;
   if (!message.mentions.has(client.user.id)){
-    console.log("Bot not mentioned");
     return;
   }
-
-  console.log("Bot mentioned");
+  useRoute(message.content, message.channel);
 });

@@ -1,5 +1,6 @@
-import { capitalize } from "../Tools/utils.js";
+import { capitalize, getDepartureTime, getCurrentTime, getRemainingTimeString } from "../Tools/utils.js";
 import { getRealTimeSchedule } from "./APIController.js";
+import moment from 'moment';
 
 export const getNextArrival = (data, channel) =>
 {
@@ -33,29 +34,19 @@ export const getNextArrival = (data, channel) =>
         {
             console.log(result)
             
-            let realTimeAvailable = result.horaire_de_depart_reel !== null;
-            const real_departure = result.horaire_de_depart_reel ? result.horaire_de_depart_reel : result.horaire_depart_theorique;
-            const departureDate = new Date(`1970-01-01T${real_departure}`);
-            departureDate.setHours(departureDate.getHours() + 1); // Adjust for timezone if necessary
+            const departureTime = getDepartureTime(result.horaire_de_depart_reel);
+            console.log(departureTime)
+            const currentTime = getCurrentTime();
+            const midday = moment().startOf('day').add(12, 'hours').format('HH:mm:ss');
 
-            const adjustedTime = departureDate.toLocaleTimeString('fr-FR', { hour12: false }).slice(0, 8);
-            const current_date = new Date().toLocaleTimeString('fr-FR', { hour12: false }).slice(0, 8);
+            const differentDays = (currentTime > midday && departureTime < midday)
             
-            if (adjustedTime < current_date) continue;
+            if (departureTime < currentTime && !differentDays) continue;
 
-            const departureDateTime = new Date(`1970-01-01T${real_departure}`);
-            departureDateTime.setHours(departureDateTime.getHours() + 1);
-            const currentDateTime = new Date(`1970-01-01T${current_date}`);
-            const timeRemaining = Math.floor((departureDateTime - currentDateTime) / 60000);
-            const secondsRemaining = Math.floor(((departureDateTime - currentDateTime) % 60000) / 1000);
+            const remainingTime = getRemainingTimeString(departureTime, currentTime, differentDays);
             
-            message += `- Direction **${result.destination_stop_headsign}** : ${adjustedTime} soit dans ${timeRemaining}:${secondsRemaining < 10 ? '0' : ''}${secondsRemaining} minutes`;
-            if (realTimeAvailable) {
-                message += " (heure réelle)\n";
-            }
-            else {
-                message += " (heure théorique)\n";
-            }
+            message += `- Direction **${result.destination_stop_headsign}** : ${departureTime} soit dans ${remainingTime}\n`;
+            
         }
         channel.send(message);
     });

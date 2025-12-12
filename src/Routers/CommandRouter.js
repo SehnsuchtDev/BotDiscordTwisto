@@ -1,4 +1,4 @@
-import { getHelp, getNextArrival } from "../Controllers/CommandController.js";
+import { getAbout, getHelp, getNextArrival, getUnknownCommand } from "../Controllers/CommandController.js";
 
 export const useRoute = (query, channel) =>
 {
@@ -13,6 +13,12 @@ export const useRoute = (query, channel) =>
             break;
         case "help":
             getHelp(channel);
+            break;
+        case "about":
+            getAbout(channel);
+            break;
+        default:
+            getUnknownCommand(channel);
             break;
     }
 }

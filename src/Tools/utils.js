@@ -5,9 +5,17 @@ export const capitalize = (str) => {
     return str.replace(/\b\w/g, c => c.toUpperCase());
 }
 
-export const getDepartureTime = (date) => {
+export const getDepartureTime = (date, theoricalDate) => {
+
     let departureTime = moment(date, 'HH:mm:ss');
-    if (departureTime.hours() === 24) {
+
+    if (theoricalDate == date)
+    {
+        return departureTime.format('HH:mm:ss');
+    }
+
+    if (departureTime.hours() === 24)
+    {
         departureTime.hours(0);
     }
     departureTime.add(1, 'hour');
@@ -30,7 +38,11 @@ export const getRemainingTimeString = (departureTime, currentTime, differentDays
         difference = (departureTime.getTime() + 24 * 60 * 60 * 1000) - currentTime.getTime();
     }
 
+    const hoursRemaining = Math.floor(difference / 3600000);
+    if (hoursRemaining > 0) {
+        difference -= hoursRemaining * 3600000;
+        
+    }
     const timeRemaining = Math.floor(difference / 60000);
-    const secondsRemaining = Math.floor((difference % 60000) / 1000);
-    return `${timeRemaining}:${secondsRemaining < 10 ? '0' : ''}${secondsRemaining}`;
+    return `${hoursRemaining > 0 ? hoursRemaining + "h " : ""}${timeRemaining} min`;
 }

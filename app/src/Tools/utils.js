@@ -1,29 +1,31 @@
 import moment from 'moment';
+import tz from 'moment-timezone';
 
 export const capitalize = (str) => {
     str = str.toLowerCase();
     return str.replace(/\b\w/g, c => c.toUpperCase());
 }
 
+export const formatString = (str) => {
+    str = str.replace(/[-\s]/g, '');
+    str = capitalize(str);
+    return str;
+}
+
 export const getDepartureTime = (date, theoricalDate) => {
 
     let departureTime = moment(date, 'HH:mm:ss');
-
-    if (theoricalDate == date)
-    {
-        return departureTime.format('HH:mm:ss');
-    }
 
     if (departureTime.hours() === 24)
     {
         departureTime.hours(0);
     }
-    departureTime.add(1, 'hour');
+
     return departureTime.format('HH:mm:ss');
 }
 
 export const getCurrentTime = () => {
-    return moment().format('HH:mm:ss');
+    return moment().tz('Europe/Paris').format('HH:mm:ss');
 }
 
 export const getRemainingTimeString = (departureTime, currentTime, differentDays) => {

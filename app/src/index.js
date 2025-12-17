@@ -21,5 +21,5 @@ client.on(Events.MessageCreate, async message => {
   if (!message.mentions.has(client.user.id)){
     return;
   }
-  useRoute(message.content, message.channel);
+  await useRoute(message.content, message.channel);
 });

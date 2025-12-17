@@ -1,6 +1,6 @@
-import { getAbout, getHelp, getNextArrival, getUnknownCommand } from "../Controllers/CommandController.js";
+import { getAbout, getAvailableRooms, getHelp, getNextArrival, getUnknownCommand } from "../Controllers/CommandController.js";
 
-export const useRoute = (query, channel) =>
+export const useRoute = async (query, channel) =>
 {
     console.log(query.split(" "));
     let args = query.split(" ");
@@ -16,6 +16,9 @@ export const useRoute = (query, channel) =>
             break;
         case "about":
             getAbout(channel);
+            break;
+        case "dispo":
+            await getAvailableRooms(channel);
             break;
         default:
             getUnknownCommand(channel);

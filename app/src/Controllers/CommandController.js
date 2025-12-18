@@ -8,6 +8,7 @@ export const getNextArrival = (data, channel) =>
     let line = data[0];
     let stop = data[1];
     stop = capitalize(stop);
+    line = line.toUpperCase();
 
     if (data.length > 2)
     {
@@ -17,6 +18,8 @@ export const getNextArrival = (data, channel) =>
     console.log(`Fetching next arrival for line ${line} at stop ${stop}`);
 
     getRealTimeSchedule(line, stop, (data) => {
+        console.log(data);
+
         if (data === null)
         {
             channel.send("J'ai po réussi à trouver..");
@@ -31,25 +34,33 @@ export const getNextArrival = (data, channel) =>
         }
 
         let message = ''
-        let stop_headsign = stop;
+        let direction = '';
         for (let result of data.results)
         {
+            if (direction == '' || direction != result.destination_stop_headsign)
+            {
+                direction = result.destination_stop_headsign;
+                message = message + `\n**Direction ${Buffer.from(direction, 'latin1').toString('utf8')} :**\n`;
+            }
+
             const departureTime = getDepartureTime(result.horaire_depart_theorique);
             const currentTime = getCurrentTime();
+            const currentTimeLimit = getCurrentTime(60);
 
-            const midday = moment().startOf('day').add(12, 'hours').format('HH:mm:ss');
-            const differentDays = (currentTime > midday && departureTime < midday)
+            const differentDays = areDifferentDays(currentTime, departureTime);
             
-            if (departureTime < currentTime && !differentDays) continue;
+            if (departureTime <= currentTime && !differentDays || departureTime >= currentTimeLimit) continue;
             if (formatString(result.destination_stop_headsign) == formatString(result.nom_de_l_arret_stop_name)) continue;
 
             const remainingTime = getRemainingTimeString(departureTime, currentTime, differentDays);
 
-            stop_headsign = Buffer.from(result.destination_stop_headsign, 'latin1').toString('utf8');
-            
-            message += `- Direction **${stop_headsign}** : ${departureTime} soit dans ${remainingTime}\n`;
+            message += `- **${departureTime}** soit dans **${remainingTime}**\n`;
             
         }
+
+        console.log(stop);
+        stop = stop.toUpperCase();
+        console.log(stop);
 
         if (message == '')
         {
@@ -58,7 +69,7 @@ export const getNextArrival = (data, channel) =>
 
         else
         {
-            message = `**Prochains départs du ${line} à ${stop}:**\n` + message;
+            message = `**Prochains départs du ${line} à ${stop}**\n` + message;
         }
         channel.send(message);
     });
@@ -106,7 +117,16 @@ export const getAvailableRooms = async (channel) =>
         message += roomName
     }
 
-    message = "**Salles informatiques disponibles :**" + message;
+    if (message == "")
+    {
+        message = "Toutes les salles informatiques sont occupées. DSL :(";
+    }
+
+    else
+    {
+        message = "**Salles informatiques disponibles :**" + message;
+    }
+
     channel.send(message);
 }
 
@@ -114,6 +134,8 @@ const searchRoom = async (roomId) =>
 {
     return new Promise((resolve) => {
         getScheduleForResource(roomId, (data) => {
+            console.log(data);
+
             if (data === null)
             {
                 console.error({ time: Date.now(), data})
@@ -121,17 +143,39 @@ const searchRoom = async (roomId) =>
                 return;
             }
 
-            let tmp = data.find((resource) => {
-                const now = moment().tz('Europe/Paris');
-                const start = moment(resource.start);
-                const end = moment(resource.end);
-                return now.isBetween(start, end);
+            const now = moment().tz('Europe/Paris');
+
+            let currentCourse = data.find((resource) => {
+                const start = moment(resource.start)
+                const end = moment(resource.end)
+                return now.isBetween(start, end, undefined, '[]');
             })
 
             let message = "";
-            if (tmp == undefined)
+            if (currentCourse == undefined)
             {
-                message += `\n- **${data[0].location}**`;
+                let nextCourse = data.find((resource) => {
+                    const start = moment(resource.start);
+                    return now.isBefore(start);
+                });
+
+                let nextCourseDate = moment(nextCourse.start);
+
+                let differentDays = now.get('date') !== nextCourseDate.get('date');
+                
+                let timeString = ""
+                if (differentDays)
+                {
+                    timeString = "(prochain cours le " + nextCourseDate.format('DD/MM') + ")";
+                }
+
+                else 
+                {
+                    let remainingTime = getRemainingTimeString(nextCourseDate.format('HH:mm:ss'), now.format('HH:mm:ss'), false);
+                    timeString = `pendant encore ${remainingTime} (prochain cours à ${nextCourseDate.format('HH:mm')})`;
+                }
+
+                message += `\n- **${data[0].location}** ${timeString}`;
             }
 
             resolve(message);

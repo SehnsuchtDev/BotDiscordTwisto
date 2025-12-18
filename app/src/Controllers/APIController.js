@@ -9,7 +9,7 @@ export const getRealTimeSchedule = (line, stop, callback) =>
     get(BASE_URL_TWISTO)
     .query({
         where: `ligne='${line}' and nom_de_l_arret_stop_name like '%${stop}%'`,
-        order_by: 'horaire_depart_theorique',
+        order_by: 'destination_stop_headsign, horaire_depart_theorique',
         limit: 50
     })
     .end((err, res) => {

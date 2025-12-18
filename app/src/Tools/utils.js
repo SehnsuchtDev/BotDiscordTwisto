@@ -24,12 +24,18 @@ export const getDepartureTime = (date, theoricalDate) => {
     return departureTime.format('HH:mm:ss');
 }
 
-export const getCurrentTime = () => {
-    return moment().tz('Europe/Paris').format('HH:mm:ss');
+export const getCurrentTime = (offset) => {
+    let date = moment().tz('Europe/Paris');
+
+    if (offset)
+    {
+        date = date.add(offset, 'minutes');
+    }
+
+    return date.format('HH:mm:ss');
 }
 
 export const getRemainingTimeString = (departureTime, currentTime, differentDays) => {
-    console.log(departureTime, currentTime);
     
     departureTime = new Date(`1970-01-01T${departureTime}`);
     currentTime = new Date(`1970-01-01T${currentTime}`);

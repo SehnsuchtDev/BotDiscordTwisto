@@ -37,20 +37,22 @@ export const getNextArrival = (data, channel) =>
         let direction = '';
         for (let result of data.results)
         {
-            if (direction == '' || direction != result.destination_stop_headsign)
-            {
-                direction = result.destination_stop_headsign;
-                message = message + `\n**Direction ${Buffer.from(direction, 'latin1').toString('utf8')} :**\n`;
-            }
 
             const departureTime = getDepartureTime(result.horaire_depart_theorique);
             const currentTime = getCurrentTime();
             const currentTimeLimit = getCurrentTime(60);
 
-            const differentDays = areDifferentDays(currentTime, departureTime);
-            
+            const midday = moment().startOf('day').add(12, 'hours').format('HH:mm:ss');
+            const differentDays = (currentTime > midday && departureTime < midday);
+
             if (departureTime <= currentTime && !differentDays || departureTime >= currentTimeLimit) continue;
             if (formatString(result.destination_stop_headsign) == formatString(result.nom_de_l_arret_stop_name)) continue;
+
+            if (direction == '' || direction != result.destination_stop_headsign)
+            {
+                direction = result.destination_stop_headsign;
+                message = message + `\n**Direction ${Buffer.from(direction, 'latin1').toString('utf8')} :**\n`;
+            }
 
             const remainingTime = getRemainingTimeString(departureTime, currentTime, differentDays);
 
@@ -58,9 +60,7 @@ export const getNextArrival = (data, channel) =>
             
         }
 
-        console.log(stop);
         stop = stop.toUpperCase();
-        console.log(stop);
 
         if (message == '')
         {
@@ -88,7 +88,7 @@ export const getHelp = (channel) =>
 
 export const getAbout = (channel) =>
 {
-    const aboutMessage = `Ce bot utilise les données de l'[API Twisto](https://data.twisto.fr/).\n[Repo GitHub](https://github.com/SehnsuchtDev/BotDiscordTwisto) par <@285497350695157760>.`;
+    const aboutMessage = `Ce bot utilise les données de l'[API Twisto](https://data.twisto.fr/) et de l'[API EtuEDT](https://edt.antoninhuaut.fr/swagger).\n[Repo GitHub](https://github.com/SehnsuchtDev/BotDiscordTwisto) par <@285497350695157760>.`;
     channel.send(aboutMessage);
 }
 
@@ -146,8 +146,8 @@ const searchRoom = async (roomId) =>
             const now = moment().tz('Europe/Paris');
 
             let currentCourse = data.find((resource) => {
-                const start = moment(resource.start)
-                const end = moment(resource.end)
+                const start = moment(resource.start).tz('Europe/Paris');
+                const end = moment(resource.end).tz('Europe/Paris');
                 return now.isBetween(start, end, undefined, '[]');
             })
 
@@ -155,11 +155,11 @@ const searchRoom = async (roomId) =>
             if (currentCourse == undefined)
             {
                 let nextCourse = data.find((resource) => {
-                    const start = moment(resource.start);
+                    const start = moment(resource.start).tz('Europe/Paris');
                     return now.isBefore(start);
                 });
 
-                let nextCourseDate = moment(nextCourse.start);
+                let nextCourseDate = moment(nextCourse.start).tz('Europe/Paris');;
 
                 let differentDays = now.get('date') !== nextCourseDate.get('date');
                 

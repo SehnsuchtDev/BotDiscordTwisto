@@ -166,7 +166,7 @@ const searchRoom = async (roomId) =>
                 let timeString = ""
                 if (differentDays)
                 {
-                    timeString = "(prochain cours le " + nextCourseDate.format('DD/MM') + ")";
+                    timeString = "toute la journée";
                 }
 
                 else 

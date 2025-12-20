@@ -14,14 +14,14 @@ export const formatString = (str) => {
 
 export const getDepartureTime = (date, theoricalDate) => {
 
-    let departureTime = moment(date, 'HH:mm:ss');
+    let departureTime = moment(date, 'HH:mm');
 
     if (departureTime.hours() === 24)
     {
         departureTime.hours(0);
     }
 
-    return departureTime.format('HH:mm:ss');
+    return departureTime.format('HH:mm');
 }
 
 export const getCurrentTime = (offset) => {
@@ -32,7 +32,7 @@ export const getCurrentTime = (offset) => {
         date = date.add(offset, 'minutes');
     }
 
-    return date.format('HH:mm:ss');
+    return date.format('HH:mm');
 }
 
 export const getRemainingTimeString = (departureTime, currentTime, differentDays) => {

@@ -1,5 +1,5 @@
 import "dotenv/config"
-import {Client, GatewayIntentBits, Events, ClientUser} from 'discord.js';
+import {Client, GatewayIntentBits, Events, SlashCommandBuilder} from 'discord.js';
 import { configDotenv } from "dotenv";
 import { useRoute } from "./Routers/CommandRouter.js";
 

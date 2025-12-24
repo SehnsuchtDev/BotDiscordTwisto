@@ -3,7 +3,7 @@ import tz from 'moment-timezone';
 
 export const capitalize = (str) => {
     str = str.toLowerCase();
-    return str.replace(/\b\w/g, c => c.toUpperCase());
+    return str.replace(/^(.)|(?<=\s)(.)/g, c => c.toUpperCase());
 }
 
 export const formatString = (str) => {
@@ -14,7 +14,13 @@ export const formatString = (str) => {
 
 export const getDepartureTime = (date, theoricalDate) => {
 
-    let departureTime = moment(date, 'HH:mm');
+    let departureTime = moment(date, 'HH:mm').tz('Europe/Paris');
+
+    if (theoricalDate != undefined && theoricalDate != date)
+    {
+        // departureTime = moment(theoricalDate, 'HH:mm').tz('Europe/Paris').add(1, 'hours');
+        console.log(theoricalDate, date, moment(theoricalDate, 'HH:mm').tz('Europe/Paris').add(1, 'hours'));
+    }
 
     if (departureTime.hours() === 24)
     {
@@ -22,6 +28,25 @@ export const getDepartureTime = (date, theoricalDate) => {
     }
 
     return departureTime.format('HH:mm');
+}
+
+export const getTime = (hour, minute, offset) => {
+    if (hour || minute)
+    {
+        let date = moment();
+        date.hours(hour ? hour : 0);
+        date.minutes(minute ? minute : 0);
+        date.seconds(0);
+
+        if (offset)
+        {
+            date = moment(date, 'HH:mm').add(offset, 'minutes');
+        }
+
+        return date.format('HH:mm');
+    }
+
+    return getCurrentTime(offset);
 }
 
 export const getCurrentTime = (offset) => {

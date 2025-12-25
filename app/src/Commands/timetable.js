@@ -6,19 +6,24 @@ import {SlashCommandBuilder} from 'discord.js';
 import { getJsonFromFile, saveJsonToFile } from "../Controllers/FileController.js";
 
 let intervalList = {};
+let intervalDurationList = {};
 
 export const command = {
     data : new SlashCommandBuilder()
             .setName('dispo')
             .setDescription('Affiche les salles informatiques disponibles à l\'IUT')
-            .addSubcommand(option => 
-                option.setName('check')
+            .addSubcommand(subcommand => 
+                subcommand.setName('check')
                     .setDescription('Vérifie les salles informatiques disponibles une seule fois'))
-            .addSubcommand(option => 
-                option.setName('start')
-                    .setDescription('Appelle la commande toutes 5 minutes'))
-            .addSubcommand(option => 
-                option.setName('stop')
+            .addSubcommand(subcommand => 
+                subcommand.setName('start')
+                    .setDescription('Appelle la commande régulièrement')
+                    .addNumberOption(option => 
+                        option.setName('intervalle')
+                            .setDescription('Intervalle en minutes (par défaut 5 minutes)')
+                            .setRequired(false)))
+            .addSubcommand(subcommand => 
+                subcommand.setName('stop')
                     .setDescription('Arrête la boucle')),
     async execute(interaction) {
         await interaction.deferReply();
@@ -27,7 +32,8 @@ export const command = {
 
         switch (interaction.options.getSubcommand()) {
             case "start":
-                message = await setAvailableRoomsTimer(interaction.channel);
+                const interval = interaction.options.getNumber('intervalle') || 5;
+                message = await setAvailableRoomsTimer(interaction.channel, false, interval);
                 break;
             case "stop":
                 message = await stopAvailableRoomsTimer(interaction.channel);
@@ -45,12 +51,11 @@ export const reload = async (client) => {
     const savedData = await getJsonFromFile(fileName);
     const channelValues = savedData ? savedData : [];
 
-    for (let i = 0; i < channelValues.length; i++)
+    for (let [channelId, interval] of Object.entries(savedData))
     {
-        let channel = channelValues[i];
-        channel = await client.channels.fetch(channel.id);
+        let channel = await client.channels.fetch(channelId);
         console.log("Reloading timetable loop for channel " + channel.name);
-        setAvailableRoomsTimer(channel, false);
+        setAvailableRoomsTimer(channel, true, interval);
     }
 }
 
@@ -139,21 +144,23 @@ const searchRoom = async (roomId) =>
     })
 }
 
-const setAvailableRoomsTimer = async (channel, fromReload = true) =>
+const setAvailableRoomsTimer = async (channel, fromReload = false, interval) =>
 {
     let intervalId = setInterval(async () => {
         console.log("Sending available rooms loop message to channel " + channel.name);
         let message = await getAvailableRooms();
         channel.send({content: message});
-    }, 5 * 60 * 1000); 
+    }, interval * 60 * 1000); 
 
     intervalList[channel.id] = intervalId;
+    intervalDurationList[channel.id] = interval;
     let message = "";
 
-    if (fromReload)
+    if (!fromReload)
     {
-        await saveJsonToFile(Object.keys(intervalList), fileName);
-        message = "La commande d'affichage des salles informatiques disponibles toutes les 5 minutes a été activée.";
+        const intervalListJson = JSON.parse(JSON.stringify(intervalDurationList));
+        await saveJsonToFile(intervalListJson, fileName);
+        message = `La commande d'affichage des salles informatiques disponibles toutes les ${interval} minutes a été activée.`;
     }
     
     return message;

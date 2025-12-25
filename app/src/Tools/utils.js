@@ -86,3 +86,7 @@ export const getRemainingTimeString = (departureTime, currentTime, differentDays
     const timeRemaining = Math.floor(difference / 60000);
     return `${hoursRemaining > 0 ? hoursRemaining + "h " : ""}${timeRemaining} min`;
 }
+
+export const getPlural = (count, singular, plural) => {
+    return count > 1 ? plural : singular;
+}

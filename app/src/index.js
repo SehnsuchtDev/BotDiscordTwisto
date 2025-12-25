@@ -21,33 +21,19 @@ export const client = new Client({
 const token = process.env.DISCORD_TOKEN;
 const clientId = process.env.APPLICATION_ID;
 
-client.commands = new Collection();
-const commands = [];
-
-// Get __dirname equivalent for ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Grab all the command files from the commands directory
-const foldersPath = path.join(__dirname, 'Commands');
-const commandFiles = fs.readdirSync(foldersPath);
-
-
-
-// Construct and prepare an instance of the REST module
-const rest = new REST().setToken(token);
-
-// Deploy your commands
-(async () => {
-    try {        
-        await rest.put(Routes.applicationCommands(clientId), { body: commands });
-    } catch (error) {
-        console.error(error);
-    }
-})();
-
 client.on(Events.ClientReady, async () => {
     console.log(`Logged in as ${client.user.tag}`);
+
+    client.commands = new Collection();
+    const commands = [];
+
+    // Get __dirname equivalent for ES modules
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+
+    // Grab all the command files from the commands directory
+    const foldersPath = path.join(__dirname, 'Commands');
+    const commandFiles = fs.readdirSync(foldersPath);
 
 	for (const file of commandFiles) {
     let filePath = path.join(foldersPath, file);
@@ -73,6 +59,18 @@ client.on(Events.ClientReady, async () => {
         console.error(`[ERROR] Failed to load command ${file}:`, error);
     }
 }
+
+// Construct and prepare an instance of the REST module
+const rest = new REST().setToken(token);
+
+// Deploy your commands
+(async () => {
+    try {        
+        await rest.put(Routes.applicationCommands(clientId), { body: commands });
+    } catch (error) {
+        console.error(error);
+    }
+})();
 });
 
 client.on(Events.InteractionCreate, async (interaction) => {
@@ -80,7 +78,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     
     const command = interaction.client.commands.get(interaction.commandName);
 
-	console.log(moment().tz("Europe/Paris").format("HH:mm") + " " + interaction.user.tag + " " + command.data.name)
+	console.log(moment().tz("Europe/Paris").format("HH:mm") + " " + interaction.user.tag + " " + interaction.commandName);
     
     if (!command) {
         console.error(`No command matching ${interaction.commandName} was found.`);

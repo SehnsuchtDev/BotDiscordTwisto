@@ -3,8 +3,9 @@ import { getScheduleForResource, getRealTimeSchedule } from "../Controllers/APIC
 import moment from 'moment';
 import tz from 'moment-timezone';
 import {SlashCommandBuilder} from 'discord.js';
+import { getJsonFromFile, saveJsonToFile } from "../Controllers/FileController.js";
 
-let intervalList = [];
+let intervalList = {};
 
 export const command = {
     data : new SlashCommandBuilder()
@@ -36,6 +37,20 @@ export const command = {
         }
 
         await interaction.editReply({content: message});
+    }
+}
+
+const fileName = "serversWithLoop.json"
+export const reload = async (client) => {
+    const savedData = await getJsonFromFile(fileName);
+    const channelValues = savedData ? savedData : [];
+
+    for (let i = 0; i < channelValues.length; i++)
+    {
+        let channel = channelValues[i];
+        channel = await client.channels.fetch(channel.id);
+        console.log("Reloading timetable loop for channel " + channel.name);
+        setAvailableRoomsTimer(channel, false);
     }
 }
 
@@ -124,16 +139,23 @@ const searchRoom = async (roomId) =>
     })
 }
 
-const setAvailableRoomsTimer = async (channel) =>
+const setAvailableRoomsTimer = async (channel, fromReload = true) =>
 {
     let intervalId = setInterval(async () => {
+        console.log("Sending available rooms loop message to channel " + channel.name);
         let message = await getAvailableRooms();
         channel.send({content: message});
     }, 5 * 60 * 1000); 
 
     intervalList[channel.id] = intervalId;
+    let message = "";
 
-    let message = "La commande d'affichage des salles informatiques disponibles toutes les 5 minutes a été activée.";
+    if (fromReload)
+    {
+        await saveJsonToFile(Object.keys(intervalList), fileName);
+        message = "La commande d'affichage des salles informatiques disponibles toutes les 5 minutes a été activée.";
+    }
+    
     return message;
 }
 
@@ -142,13 +164,15 @@ const stopAvailableRoomsTimer = async (channel) =>
     if (intervalList[channel.id])
     {
         clearInterval(intervalList[channel.id]);
-        intervalList[channel.id] = null;
+        delete intervalList[channel.id];
+        await saveJsonToFile(Object.keys(intervalList), fileName);
     }
 
     else
     {
         return "La commande d'affichage des salles informatiques n'était pas active.";
     }
+
 
     return "La commande d'affichage des salles informatiques ne sera plus répétée.";
 }

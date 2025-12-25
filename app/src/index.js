@@ -10,7 +10,7 @@ import tz from 'moment-timezone';
 
 configDotenv({ path: '../.env' });
 
-const client = new Client({ 
+export const client = new Client({ 
     intents: [
         GatewayIntentBits.Guilds, 
         GatewayIntentBits.GuildMessages, 
@@ -32,25 +32,7 @@ const __dirname = path.dirname(__filename);
 const foldersPath = path.join(__dirname, 'Commands');
 const commandFiles = fs.readdirSync(foldersPath);
 
-for (const file of commandFiles) {
-    let filePath = path.join(foldersPath, file);
-    filePath = pathToFileURL(filePath).href;
-    
-    try {
-        const module = await import(filePath);
-        const command = module.command || module.default || module;
-        
-        if ('data' in command && 'execute' in command) {
-            commands.push(command.data.toJSON());
-            client.commands.set(command.data.name, command);
-            console.log(`Loaded command: ${command.data.name}`);
-        } else {
-            console.error(`[WARNING] The command at ${file} is missing a required "data" or "execute" property.`);
-        }
-    } catch (error) {
-        console.error(`[ERROR] Failed to load command ${file}:`, error);
-    }
-}
+
 
 // Construct and prepare an instance of the REST module
 const rest = new REST().setToken(token);
@@ -64,8 +46,33 @@ const rest = new REST().setToken(token);
     }
 })();
 
-client.on(Events.ClientReady, () => {
+client.on(Events.ClientReady, async () => {
     console.log(`Logged in as ${client.user.tag}`);
+
+	for (const file of commandFiles) {
+    let filePath = path.join(foldersPath, file);
+    filePath = pathToFileURL(filePath).href;
+    
+    try {
+        const module = await import(filePath);
+        const command = module.command || module.default || module;
+		const reload = module.reload || (() => {});
+        
+        if ('data' in command && 'execute' in command) {
+            commands.push(command.data.toJSON());
+            client.commands.set(command.data.name, command);
+            console.log(`Loaded command: ${command.data.name}`);
+        } else {
+            console.error(`[WARNING] The command at ${file} is missing a required "data" or "execute" property.`);
+        }
+
+		if (typeof reload === 'function') {
+			reload(client);
+		}
+    } catch (error) {
+        console.error(`[ERROR] Failed to load command ${file}:`, error);
+    }
+}
 });
 
 client.on(Events.InteractionCreate, async (interaction) => {

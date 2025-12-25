@@ -37,10 +37,10 @@ export const command = {
     }
 }
 
+export const reload = () => {}
+
 const getStopList = async (line, stop, hour, minute) =>
 {
-    stop = capitalize(stop);
-    line = line.toUpperCase();
 
     console.log(`Fetching next arrival for line ${line} at stop ${stop}`);
 
@@ -112,6 +112,10 @@ const getStopList = async (line, stop, hour, minute) =>
 
 const getNextStopsString = async (line, stop, hour, minute) =>
 {
+    
+    stop = capitalize(stop);
+    line = line.toUpperCase();
+
     const stopList = await getStopList(line, stop, hour, minute);
 
     if (stopList.error)
@@ -131,7 +135,7 @@ const getNextStopsString = async (line, stop, hour, minute) =>
 
             if (stopInfo.realTime)
             {
-                message += `  _(heure réelle)_\n`;
+                message += `  _(temps réel)_\n`;
             }
 
             else

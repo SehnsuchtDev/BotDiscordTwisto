@@ -51,7 +51,7 @@ const getNextArrival = async (line, stop, hour, minute) =>
         });
     });
 
-    console.log(data);
+    //console.log(data);
 
     if (data === null)
     {
@@ -72,12 +72,17 @@ const getNextArrival = async (line, stop, hour, minute) =>
     let direction = '';
     for (let result of data.results)
     {
-        const departureTime = getDepartureTime(result.horaire_depart_theorique, result.horaire_de_depart_reel);
+        console.log("-----------------------------------------------------")
+        const {departureTime, realTime} = getDepartureTime(result.horaire_depart_theorique, result.horaire_de_depart_reel);
 
         const differentDays = moment(result.date_du_jour).format('YYYY-MM-DD') !== moment().tz('Europe/Paris').format('YYYY-MM-DD');
 
+        console.log(departureTime, currentTime, departureTime <= currentTime, differentDays, departureTime >= currentTimeLimit)
+
         if (departureTime <= currentTime && !differentDays || departureTime >= currentTimeLimit) continue;
         if (formatString(result.destination_stop_headsign) == formatString(result.nom_de_l_arret_stop_name)) continue;
+
+        console.log(result)
 
         if (direction == '' || direction != result.destination_stop_headsign)
         {
@@ -87,7 +92,17 @@ const getNextArrival = async (line, stop, hour, minute) =>
 
         const remainingTime = getRemainingTimeString(departureTime, currentTime, differentDays);
 
-        message += `- **${departureTime}** soit dans **${remainingTime}**\n`;
+        message += `- **${departureTime}** soit dans **${remainingTime}**`;
+
+        if (realTime)
+        {
+            message += `  _(heure réelle)_\n`;
+        }
+
+        else
+        {
+            message += `\n`;
+        }
         
     }
 

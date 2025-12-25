@@ -4,6 +4,9 @@ import { configDotenv } from "dotenv";
 import fs from 'fs';
 import path from 'path';
 import { pathToFileURL, fileURLToPath } from "url";
+import moment from 'moment'
+import tz from 'moment-timezone';
+
 
 configDotenv({ path: '../.env' });
 
@@ -70,7 +73,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     
     const command = interaction.client.commands.get(interaction.commandName);
 
-	console.log(command.data.name)
+	console.log(moment().tz("Europe/Paris").format("HH:mm") + " " + interaction.user.tag + " " + command.data.name)
     
     if (!command) {
         console.error(`No command matching ${interaction.commandName} was found.`);

@@ -10,7 +10,7 @@ export const command = {
     }
 };
 
-const getAbout = (channel) =>
+const getAbout = () =>
 {
     const aboutMessage = `Ce bot utilise les données de l'[API Twisto](https://data.twisto.fr/) et de l'[API EtuEDT](https://edt.antoninhuaut.fr/swagger).\n[Repo GitHub](https://github.com/SehnsuchtDev/BotDiscordTwisto) par <@285497350695157760>.`;
     return aboutMessage;

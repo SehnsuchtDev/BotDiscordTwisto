@@ -12,14 +12,21 @@ export const formatString = (str) => {
     return str;
 }
 
-export const getDepartureTime = (date, theoricalDate) => {
+export const getDepartureTime = (date, realTimeDate) => {
+    let departureTime = moment(date, 'HH:mm:ss');
 
-    let departureTime = moment(date, 'HH:mm').tz('Europe/Paris');
+    let dateInRealTime = false;
 
-    if (theoricalDate != undefined && theoricalDate != date)
+    if (realTimeDate != undefined && realTimeDate != date)
     {
-        // departureTime = moment(theoricalDate, 'HH:mm').tz('Europe/Paris').add(1, 'hours');
-        console.log(theoricalDate, date, moment(theoricalDate, 'HH:mm').tz('Europe/Paris').add(1, 'hours'));
+        let realTime = moment.utc(realTimeDate, 'HH:mm:ss').tz('Europe/Paris');
+        console.log("Real-time date:", realTimeDate, "Parsed real-time:", realTime.format('HH:mm:ss'), "Theorical departure:", departureTime.format('HH:mm:ss'));
+
+        if (!departureTime.isSame(realTime))
+        {
+            dateInRealTime = true;
+            departureTime = realTime;
+        }
     }
 
     if (departureTime.hours() === 24)
@@ -27,7 +34,7 @@ export const getDepartureTime = (date, theoricalDate) => {
         departureTime.hours(0);
     }
 
-    return departureTime.format('HH:mm');
+    return {departureTime: departureTime.format('HH:mm'), realTime: dateInRealTime};
 }
 
 export const getTime = (hour, minute, offset) => {

@@ -75,7 +75,7 @@ const searchRoom = async (roomId) =>
 {
     return new Promise((resolve) => {
         getScheduleForResource(roomId, (data) => {
-            console.log(data);
+            // console.log(data);
 
             if (data === null)
             {

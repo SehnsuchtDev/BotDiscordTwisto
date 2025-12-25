@@ -32,16 +32,15 @@ export const command = {
         const hour = interaction.options.getNumber('heure');
         const minute = interaction.options.getNumber('minute');
 
-        const message = await getNextArrival(line, stop, hour, minute);
+        const message = await getNextStopsString(line, stop, hour, minute);
         await interaction.editReply({content: message});
     }
 }
 
-const getNextArrival = async (line, stop, hour, minute) =>
+const getStopList = async (line, stop, hour, minute) =>
 {
     stop = capitalize(stop);
     line = line.toUpperCase();
-    console.log(stop)
 
     console.log(`Fetching next arrival for line ${line} at stop ${stop}`);
 
@@ -51,24 +50,34 @@ const getNextArrival = async (line, stop, hour, minute) =>
         });
     });
 
-    //console.log(data);
+    const currentTime = getTime(hour, minute);
 
     if (data === null)
     {
         console.error({ time: Date.now(), line, stop, data})
-        return "J'ai po réussi à trouver.."
+        return {
+                error: "J'ai po réussi à trouver..",
+                currentTime: currentTime
+                };
     }
 
     if (!data || data.results.length === 0)
     {
         console.error({ time: Date.now(), line, stop, data})
-        return `Aucun horaire trouvé pour la ligne ${line} à l'arrêt ${stop}. Peut-être que l'arrêt ou la ligne est incorrecte.`;
+        return {
+                error: `Aucun horaire trouvé pour la ligne ${line} à l'arrêt ${stop}. Peut-être que l'arrêt ou la ligne est incorrecte.`,
+                currentTime: currentTime
+                };
     }
 
-    const currentTime = getTime(hour, minute);
-    const currentTimeLimit = getTime(hour, minute, 60);
+    // const currentTimeLimit = getTime(hour, minute, 60);
 
-    let message = ''
+    let stopList = {
+        currentTime,
+        stops : {}
+    }
+    stopList.currentTime = currentTime;
+
     let direction = '';
     for (let result of data.results)
     {
@@ -77,9 +86,8 @@ const getNextArrival = async (line, stop, hour, minute) =>
 
         const differentDays = moment(result.date_du_jour).format('YYYY-MM-DD') !== moment().tz('Europe/Paris').format('YYYY-MM-DD');
 
-        console.log(departureTime, currentTime, departureTime <= currentTime, differentDays, departureTime >= currentTimeLimit)
-
-        if (departureTime <= currentTime && !differentDays || departureTime >= currentTimeLimit) continue;
+        if (departureTime <= currentTime && !differentDays) continue;
+        // if (departureTime >= currentTimeLimit) continue;
         if (formatString(result.destination_stop_headsign) == formatString(result.nom_de_l_arret_stop_name)) continue;
 
         console.log(result)
@@ -87,23 +95,51 @@ const getNextArrival = async (line, stop, hour, minute) =>
         if (direction == '' || direction != result.destination_stop_headsign)
         {
             direction = result.destination_stop_headsign;
-            message = message + `\n**Direction ${Buffer.from(direction, 'latin1').toString('utf8')} :**\n`;
+            stopList.stops[direction] = [];
         }
 
         const remainingTime = getRemainingTimeString(departureTime, currentTime, differentDays);
 
-        message += `- **${departureTime}** soit dans **${remainingTime}**`;
+        stopList.stops[direction].push({
+            departureTime: departureTime,
+            remainingTime: remainingTime,
+            realTime: realTime
+        })
+    }
 
-        if (realTime)
+    return stopList;
+}
+
+const getNextStopsString = async (line, stop, hour, minute) =>
+{
+    const stopList = await getStopList(line, stop, hour, minute);
+
+    if (stopList.error)
+    {
+        return stopList.error;
+    }
+
+    let message = ''
+    for (let [direction, stops] of Object.entries(stopList.stops))
+    {
+        message = message + `\n**Direction ${Buffer.from(direction, 'latin1').toString('utf8')} :**\n`;
+
+        for (let i = 0; i < Math.min(4, stops.length); i++)
         {
-            message += `  _(heure réelle)_\n`;
+            const stopInfo = stops[i];
+            message += `- **${stopInfo.departureTime}** soit dans **${stopInfo.remainingTime}**`;  
+
+            if (stopInfo.realTime)
+            {
+                message += `  _(heure réelle)_\n`;
+            }
+
+            else
+            {
+                message += `\n`;
+            }
         }
 
-        else
-        {
-            message += `\n`;
-        }
-        
     }
 
     if (message == '')
@@ -112,7 +148,7 @@ const getNextArrival = async (line, stop, hour, minute) =>
 
         if (hour)
         {
-            message += ` à ${currentTime}.`;
+            message += ` à ${stopList.currentTime}.`;
         }
 
         else
@@ -123,7 +159,7 @@ const getNextArrival = async (line, stop, hour, minute) =>
 
     else
     {
-        message = `**Prochains départs du ${line} à ${stop} à ${currentTime}**\n` + message;
+        message = `**Prochains départs du ${line} à ${stop} à ${stopList.currentTime}**\n` + message;
     }
 
     return message;

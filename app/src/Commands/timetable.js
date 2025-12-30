@@ -29,14 +29,17 @@ export const command = {
         await interaction.deferReply();
 
         let message = "";
+        const channel = interaction.channel ? interaction.channel : interaction.user;
+
+        console.log("command channel id: " + (interaction.channel ? interaction.channel.id : null), interaction.user ? interaction.user.id : null);
 
         switch (interaction.options.getSubcommand()) {
             case "start":
                 const interval = interaction.options.getNumber('intervalle') || 5;
-                message = await setAvailableRoomsTimer(interaction.channel, false, interval);
+                message = await setAvailableRoomsTimer(channel, false, interval);
                 break;
             case "stop":
-                message = await stopAvailableRoomsTimer(interaction.channel);
+                message = await stopAvailableRoomsTimer(channel);
                 break;
             case "check":
                 message = await getAvailableRooms();
@@ -51,12 +54,36 @@ export const reload = async (client) => {
     const savedData = await getJsonFromFile(fileName);
     const channelValues = savedData ? savedData : [];
 
-    for (let [channelId, interval] of Object.entries(savedData))
+    for (let [channelId, data] of Object.entries(savedData))
     {
-        let channel = await client.channels.fetch(channelId);
-        console.log("Reloading timetable loop for channel " + channel.name);
-        setAvailableRoomsTimer(channel, true, interval);
+        let channel = await getChannel(client, channelId);
+
+        if (channel == null)
+        {
+            continue;
+        }
+
+        setAvailableRoomsTimer(channel, true, data.interval, data.lastMessage);
     }
+}
+
+const getChannel = async (client, channelId) =>
+{
+    console.log("Fetching channel with ID " + channelId);
+    let channel = null;
+    try {
+        channel = await client.channels.fetch(channelId);
+        console.log("Reloading timetable loop for channel " + channel.name);
+    } catch (error) {
+        try {
+            channel = await client.users.fetch(channelId);
+            console.log("Reloading timetable loop for user " + channel.username);
+        } catch (userError) {
+            console.error(`Failed to fetch channel with ID ${channelId}:`, userError);
+        }
+    }
+
+    return channel;
 }
 
 const getAvailableRooms = async () =>
@@ -144,16 +171,36 @@ const searchRoom = async (roomId) =>
     })
 }
 
-const setAvailableRoomsTimer = async (channel, fromReload = false, interval) =>
+const sendAvailableRoomsTimerMessage = async (channel) =>
 {
-    let intervalId = setInterval(async () => {
-        console.log("Sending available rooms loop message to channel " + channel.name);
-        let message = await getAvailableRooms();
-        channel.send({content: message});
-    }, interval * 60 * 1000); 
+    console.log("Sending available rooms loop message to channel " + (channel.name ? channel.name : channel.username));
+    let message = await getAvailableRooms();
+    channel.send({content: message});
+    intervalDurationList[channel.id].lastMessage = moment().tz('Europe/Paris').format("DD/MM/YYYY HH:mm:ss");
+    const intervalListJson = JSON.parse(JSON.stringify(intervalDurationList));
+    saveJsonToFile(intervalListJson, fileName);
+}
 
+const setAvailableRoomsTimer = async (channel, fromReload = false, interval, lastMessage = null) =>
+{
+    intervalDurationList[channel.id] = {interval, lastMessage: lastMessage};
+
+    if (lastMessage != null)
+    {
+        const lastMessageDate = moment(lastMessage, "DD/MM/YYYY HH:mm:ss");
+        const timeUntilNextMessage = interval * 60 * 1000 - (moment().tz('Europe/Paris').diff(lastMessageDate));
+        const timeoutId = setTimeout(async () => {
+            await setAvailableRoomsTimer(channel, fromReload, interval);
+        }, timeUntilNextMessage);
+        intervalList[channel.id] = timeoutId;
+        return;
+    }
+
+    let intervalId = setInterval(async () => {
+        await sendAvailableRoomsTimerMessage(channel);
+    }, interval * 60 * 1000); 
     intervalList[channel.id] = intervalId;
-    intervalDurationList[channel.id] = interval;
+
     let message = "";
 
     if (!fromReload)
@@ -162,6 +209,8 @@ const setAvailableRoomsTimer = async (channel, fromReload = false, interval) =>
         await saveJsonToFile(intervalListJson, fileName);
         message = `La commande d'affichage des salles informatiques disponibles toutes les ${interval} minutes a été activée.`;
     }
+
+    await sendAvailableRoomsTimerMessage(channel);
     
     return message;
 }
@@ -172,7 +221,9 @@ const stopAvailableRoomsTimer = async (channel) =>
     {
         clearInterval(intervalList[channel.id]);
         delete intervalList[channel.id];
-        await saveJsonToFile(Object.keys(intervalList), fileName);
+        delete intervalDurationList[channel.id];
+        const intervalListJson = JSON.parse(JSON.stringify(intervalDurationList));
+        await saveJsonToFile(intervalListJson, fileName);
     }
 
     else

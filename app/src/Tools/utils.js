@@ -25,7 +25,7 @@ export const getTime = (hour, minute, offset) => {
             date = moment(date, 'HH:mm').add(offset, 'minutes');
         }
 
-        return date.format('HH:mm');
+        return date;
     }
 
     return getCurrentTime(offset);
@@ -39,18 +39,19 @@ export const getCurrentTime = (offset) => {
         date = date.add(offset, 'minutes');
     }
 
-    return date.format('HH:mm');
+    return date;
 }
 
 export const getRemainingTimeString = (departureTime, currentTime, differentDays) => {
     
-    departureTime = new Date(`1970-01-01T${departureTime}`);
-    currentTime = new Date(`1970-01-01T${currentTime}`);
+    //departureTime = new Date(`1970-01-01T${departureTime.format('HH:mm:ss')}`);
+    //currentTime = new Date(`1970-01-01T${currentTime.format('HH:mm:ss')}`);
 
     let difference = departureTime - currentTime;
+    console.log(departureTime, currentTime, difference);
 
     if (differentDays) {
-        difference = (departureTime.getTime() + 24 * 60 * 60 * 1000) - currentTime.getTime();
+        difference = (departureTime.toDate().getTime() + 24 * 60 * 60 * 1000) - currentTime.toDate().getTime();
     }
 
     const hoursRemaining = Math.floor(difference / 3600000);

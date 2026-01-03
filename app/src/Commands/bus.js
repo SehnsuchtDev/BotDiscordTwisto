@@ -1,4 +1,4 @@
-import { capitalize, getDepartureTime, getTime, getRemainingTimeString, formatString } from "../Tools/utils.js";
+import { capitalize, getTime, getRemainingTimeString, formatString } from "../Tools/utils.js";
 import { getRealTimeSchedule } from "../Controllers/APIController.js";
 import moment from 'moment';
 import tz from 'moment-timezone';
@@ -41,7 +41,6 @@ export const reload = () => {}
 
 const getStopList = async (line, stop, hour, minute) =>
 {
-
     console.log(`Fetching next arrival for line ${line} at stop ${stop}`);
 
     const data = await new Promise((resolve) => {
@@ -82,19 +81,20 @@ const getStopList = async (line, stop, hour, minute) =>
     for (let result of data.results)
     {
         console.log("-----------------------------------------------------")
-        const {departureTime, realTime} = getDepartureTime(result.horaire_depart_theorique, result.horaire_de_depart_reel);
+        const {departureTime, realTime, differentDays} = getDepartureData(result.horaire_depart_theorique, result.horaire_de_depart_reel, currentTime);
 
-        const differentDays = moment(result.date_du_jour).format('YYYY-MM-DD') !== moment().tz('Europe/Paris').format('YYYY-MM-DD');
+        if (departureTime === "Invalid date") continue;
 
+        console.log("Departure time:", departureTime, "Current time:", currentTime, "Different days:", differentDays);
         if (departureTime <= currentTime && !differentDays) continue;
-        // if (departureTime >= currentTimeLimit) continue;
         if (formatString(result.destination_stop_headsign) == formatString(result.nom_de_l_arret_stop_name)) continue;
 
         console.log(result)
 
-        if (direction == '' || direction != result.destination_stop_headsign)
+        let tempDirection = Buffer.from(result.destination_stop_headsign, 'latin1').toString('utf8');
+        if (direction == '' || direction != tempDirection)
         {
-            direction = result.destination_stop_headsign;
+            direction = tempDirection;
             stopList.stops[direction] = [];
         }
 
@@ -106,6 +106,8 @@ const getStopList = async (line, stop, hour, minute) =>
             realTime: realTime
         })
     }
+
+    stopList.stop = data.results[0].nom_de_l_arret_stop_name;
 
     return stopList;
 }
@@ -123,10 +125,12 @@ const getNextStopsString = async (line, stop, hour, minute) =>
         return stopList.error;
     }
 
+    stop = stopList.stop;
+
     let message = ''
     for (let [direction, stops] of Object.entries(stopList.stops))
     {
-        message = message + `\n**Direction ${Buffer.from(direction, 'latin1').toString('utf8')} :**\n`;
+        message = message + `\n**Direction ${direction} :**\n`;
 
         for (let i = 0; i < Math.min(4, stops.length); i++)
         {
@@ -167,4 +171,36 @@ const getNextStopsString = async (line, stop, hour, minute) =>
     }
 
     return message;
+}
+
+const getDepartureData = (date, realTimeDate, currentTime) => {
+    if (date.slice(0, 2) === '24') {
+        date = '00' + date.slice(2);
+    }
+
+    if (realTimeDate && realTimeDate.slice(0, 2) === '24') {
+        realTimeDate = '00' + realTimeDate.slice(2);
+    }
+
+    let departureTime = moment(date, 'HH:mm:ss');
+
+    let dateInRealTime = false;
+
+    if (realTimeDate != undefined && realTimeDate != date)
+    {
+        let realTime = moment.utc(realTimeDate, 'HH:mm:ss').tz('Europe/Paris');
+        console.log("Real-time date:", realTimeDate, "Parsed real-time:", realTime.format('HH:mm:ss'), "Theorical departure:", departureTime.format('HH:mm:ss'));
+
+        if (!departureTime.isSame(realTime))
+        {
+            dateInRealTime = true;
+            departureTime = realTime;
+        }
+    }
+
+    const midday = moment('12:00:00', 'HH:mm:ss');
+    currentTime = moment(currentTime, 'HH:mm:ss');
+    let differentDays = departureTime.day() !== currentTime.day();
+
+    return {departureTime: departureTime.format('HH:mm'), realTime: dateInRealTime, differentDays};
 }

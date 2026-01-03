@@ -1,7 +1,6 @@
-import { capitalize, getDepartureTime, getCurrentTime, getRemainingTimeString, formatString } from "../Tools/utils.js";
-import { getScheduleForResource, getRealTimeSchedule } from "../Controllers/APIController.js";
+import {getRemainingTimeString } from "../Tools/utils.js";
+import { getScheduleForResource } from "../Controllers/APIController.js";
 import moment from 'moment';
-import tz from 'moment-timezone';
 import {SlashCommandBuilder} from 'discord.js';
 import { getJsonFromFile, saveJsonToFile } from "../Controllers/FileController.js";
 

@@ -44,14 +44,14 @@ export const getCurrentTime = (offset) => {
 
 export const getRemainingTimeString = (departureTime, currentTime, differentDays) => {
     
-    //departureTime = new Date(`1970-01-01T${departureTime.format('HH:mm:ss')}`);
-    //currentTime = new Date(`1970-01-01T${currentTime.format('HH:mm:ss')}`);
+    departureTime = new Date(`1970-01-01T${departureTime.format('HH:mm:ss')}`);
+    currentTime = new Date(`1970-01-01T${currentTime.format('HH:mm:ss')}`);
 
     let difference = departureTime - currentTime;
     console.log(departureTime, currentTime, difference);
 
     if (differentDays) {
-        difference = (departureTime.toDate().getTime() + 24 * 60 * 60 * 1000) - currentTime.toDate().getTime();
+        difference = (departureTime.getTime() + 24 * 60 * 60 * 1000) - currentTime.getTime();
     }
 
     const hoursRemaining = Math.floor(difference / 3600000);

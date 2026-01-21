@@ -1,11 +1,10 @@
 import "dotenv/config"
-import { Client, GatewayIntentBits, Events, REST, Routes, Collection, MessageFlags } from 'discord.js';
+import { Client, GatewayIntentBits, Events, REST, Routes, Collection, MessageFlags, Partials } from 'discord.js';
 import { configDotenv } from "dotenv";
 import fs from 'fs';
 import path from 'path';
 import { pathToFileURL, fileURLToPath } from "url";
 import moment from 'moment'
-import tz from 'moment-timezone';
 
 
 configDotenv({ path: '../.env' });
@@ -14,8 +13,10 @@ export const client = new Client({
     intents: [
         GatewayIntentBits.Guilds, 
         GatewayIntentBits.GuildMessages, 
-        GatewayIntentBits.MessageContent
-    ] 
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildMessageReactions
+    ] ,
+    partials: [Partials.Message, Partials.Channel, Partials.Reaction],
 });
 
 const token = process.env.DISCORD_TOKEN;

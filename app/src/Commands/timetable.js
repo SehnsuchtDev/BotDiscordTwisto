@@ -3,14 +3,16 @@ import { getScheduleForResource } from "../Controllers/APIController.js";
 import moment from 'moment';
 import {SlashCommandBuilder} from 'discord.js';
 import { getJsonFromFile, saveJsonToFile } from "../Controllers/FileController.js";
+import { getChannel } from '../Tools/discord.js';
 
+const fileName = "serversWithLoop.json";
 let intervalList = {};
 let intervalDurationList = {};
 
 export const command = {
     data : new SlashCommandBuilder()
             .setName('dispo')
-            .setDescription('Affiche les salles informatiques disponibles à l\'IUT')
+            .setDescription('Vérifie les salles informatiques disponibles')
             .addSubcommand(subcommand => 
                 subcommand.setName('check')
                     .setDescription('Vérifie les salles informatiques disponibles une seule fois'))
@@ -48,10 +50,8 @@ export const command = {
     }
 }
 
-const fileName = "serversWithLoop.json"
 export const reload = async (client) => {
     const savedData = await getJsonFromFile(fileName);
-    const channelValues = savedData ? savedData : [];
 
     for (let [channelId, data] of Object.entries(savedData))
     {
@@ -64,25 +64,6 @@ export const reload = async (client) => {
 
         setAvailableRoomsTimer(channel, true, data.interval, data.lastMessage);
     }
-}
-
-const getChannel = async (client, channelId) =>
-{
-    console.log("Fetching channel with ID " + channelId);
-    let channel = null;
-    try {
-        channel = await client.channels.fetch(channelId);
-        console.log("Reloading timetable loop for channel " + channel.name);
-    } catch (error) {
-        try {
-            channel = await client.users.fetch(channelId);
-            console.log("Reloading timetable loop for user " + channel.username);
-        } catch (userError) {
-            console.error(`Failed to fetch channel with ID ${channelId}:`, userError);
-        }
-    }
-
-    return channel;
 }
 
 const getAvailableRooms = async () =>
@@ -158,7 +139,7 @@ const searchRoom = async (roomId) =>
 
                 else 
                 {
-                    let remainingTime = getRemainingTimeString(nextCourseDate.format('HH:mm:ss'), now.format('HH:mm:ss'), false);
+                    let remainingTime = getRemainingTimeString(nextCourseDate, now, false);
                     timeString = `pendant encore ${remainingTime} (prochain cours à ${nextCourseDate.format('HH:mm')})`;
                 }
 

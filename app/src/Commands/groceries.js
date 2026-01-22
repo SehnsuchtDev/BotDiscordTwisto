@@ -2,8 +2,11 @@ import {SlashCommandBuilder, MessageFlags, Events} from 'discord.js';
 import { getJsonFromFile, saveJsonToFile } from "../Controllers/FileController.js";
 import { getChannel } from '../Tools/discord.js';
 
-const fileName = "channelsWithListener.json"
+const listenerFileName = "channelsWithListener.json";
+const groceriesFileName = "defaultGroceryLists.json";
+const emoji = '❌';
 let listenerList = [];
+let defaultGroceriesList = {};
 
 export const command = {
     data : new SlashCommandBuilder()
@@ -14,14 +17,31 @@ export const command = {
                     .setDescription('Écoute les nouveaux messages du salon et réagit avec un emoji de suppression'))
             .addSubcommand(subcommand => 
                 subcommand.setName('stop')
-                    .setDescription('Arrête l\'écoute')),
+                    .setDescription('Arrête l\'écoute'))
+            .addSubcommand(subcommand =>
+                subcommand.setName('add')
+                    .setDescription('Ajoute un élément à la liste de courses par défaut')
+                    .addStringOption(option =>
+                        option.setName('element')
+                            .setDescription('Élément à ajouter')
+                            .setRequired(true)))
+            .addSubcommand(subcommand => 
+                subcommand.setName('remove')
+                    .setDescription('Retire un élément de la liste de courses par défaut')
+                    .addStringOption(option =>
+                        option.setName('element')
+                            .setDescription('Élément à retirer')
+                            .setRequired(true)))
+            .addSubcommand(subcommand => 
+                subcommand.setName('list')
+                    .setDescription('Affiche la liste de courses par défaut')
+                ),
     async execute(interaction) {
-        await interaction.deferReply();
+        await interaction.deferReply({flags : MessageFlags.Ephemeral});
 
         let message = "";
         const channel = interaction.channel ? interaction.channel : interaction.user;
-
-        console.log("command channel id: " + (interaction.channel ? interaction.channel.id : null), interaction.user ? interaction.user.id : null);
+        const element = interaction.options.getString('element') ? interaction.options.getString('element') : null;
 
         switch (interaction.options.getSubcommand()) {
             case "start":
@@ -29,6 +49,15 @@ export const command = {
                 break;
             case "stop":
                 message = await stopGroceriesListener(channel);
+                break;
+            case "add":
+                message = await addGroceryElement(channel, element)
+                break;
+            case "remove":
+                message = await removeGroceryElement(channel, element);
+                break;
+            case "list":
+                message = await listGroceryElements(channel);
                 break;
         }
 
@@ -44,7 +73,16 @@ export const command = {
 }
 
 export const reload = async (client) => {
-    listenerList = await getJsonFromFile(fileName);
+    listenerList = await getJsonFromFile(listenerFileName);
+    defaultGroceriesList = await getJsonFromFile(groceriesFileName);
+    
+    // Ensure both are correct types, not null or corrupted
+    if (!listenerList || Array.isArray(listenerList)) {
+        listenerList = [];
+    }
+    if (!defaultGroceriesList || Array.isArray(defaultGroceriesList)) {
+        defaultGroceriesList = {};
+    }
 
     for (let channelId of listenerList)
     {
@@ -66,7 +104,7 @@ export const reload = async (client) => {
         const channelId = message.channel ? message.channel.id : message.client.id;
         if (!listenerList.includes(channelId)) return;
 
-        message.react('❌');
+        message.react(emoji);
     });
 
     // delete reacted message
@@ -89,8 +127,7 @@ export const reload = async (client) => {
         const channelId = message.channel ? message.channel.id : message.client.id;
 
         if (!listenerList.includes(channelId)) return;
-        if (!message.author.id === client.user.id) return;
-        if (reaction.emoji.name !== '❌') return;
+        if (reaction.emoji.name !== emoji) return;
 
         message.delete();
     });
@@ -105,7 +142,7 @@ const setGroceriesListener = async (channel, fromReload = false) =>
         // add channel to list
         listenerList.push(channel.id);
         const listenerListJson = JSON.parse(JSON.stringify(listenerList));
-        await saveJsonToFile(listenerListJson, fileName);
+        await saveJsonToFile(listenerListJson, listenerFileName);
         message = `La commande d'écoute des nouveaux messages a été démarrée dans le salon.`;
     }
     
@@ -116,13 +153,12 @@ const stopGroceriesListener = async (channel) =>
 {
     if (listenerList.includes(channel.id))
     {
-        // stop listener
-
         // delete from list
         const index = listenerList.indexOf(channel.id);
-        delete listenerList[index];
+        listenerList.splice(index, 1);
+        console.log(listenerList);
         const listenerListJson = JSON.parse(JSON.stringify(listenerList));
-        await saveJsonToFile(listenerListJson, fileName);
+        await saveJsonToFile(listenerListJson, listenerFileName);
     }
 
     else
@@ -132,4 +168,65 @@ const stopGroceriesListener = async (channel) =>
 
 
     return "La commande d'écoute des nouveaux messages ne sera plus répétée.";
+}
+
+const addGroceryElement = async (channel, element) =>
+{
+    // Ensure defaultGroceriesList is an object
+    if (Array.isArray(defaultGroceriesList)) {
+        defaultGroceriesList = {};
+    }
+    
+    if (defaultGroceriesList[channel.id] != null && defaultGroceriesList[channel.id].includes(element))
+    {
+        return `L'élément "${element}" est déjà dans la liste de courses par défaut.`;
+    }
+
+    if (defaultGroceriesList[channel.id] == null)
+    {
+        defaultGroceriesList[channel.id] = [element];
+    }
+
+    else
+    {
+        defaultGroceriesList[channel.id].push(element);
+    }
+
+    const groceriesListJson = JSON.parse(JSON.stringify(defaultGroceriesList));
+    console.log(defaultGroceriesList);
+    console.log(groceriesListJson);
+    await saveJsonToFile(groceriesListJson, groceriesFileName);
+
+    return `"${element}" a été ajouté à la liste de courses par défaut.`;
+}
+
+const removeGroceryElement = async (channel, element) =>
+{
+    if (defaultGroceriesList[channel.id] == null || !defaultGroceriesList[channel.id].includes(element))
+    {
+        return `"${element}" n'est pas dans la liste de courses par défaut.`;
+    }
+
+    const index = defaultGroceriesList[channel.id].indexOf(element);
+    defaultGroceriesList[channel.id].splice(index, 1);
+
+    const groceriesListJson = JSON.parse(JSON.stringify(defaultGroceriesList));
+    await saveJsonToFile(groceriesListJson, groceriesFileName);
+    return `"${element}" a été retiré de la liste de courses par défaut.`;
+}
+
+const listGroceryElements = async (channel) =>
+{
+    if (defaultGroceriesList[channel.id] == null || defaultGroceriesList[channel.id].length === 0)
+    {
+        return "La liste de courses par défaut est vide.";
+    }
+
+    for (let i = 0; i < defaultGroceriesList[channel.id].length; i++)
+    {
+        let message = await channel.send(`${defaultGroceriesList[channel.id][i]}`);
+        message.react(emoji);
+    }
+
+    return "La liste de courses par défaut a été affichée.";
 }

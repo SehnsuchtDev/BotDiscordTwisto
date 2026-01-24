@@ -77,10 +77,10 @@ export const reload = async (client) => {
     defaultGroceriesList = await getJsonFromFile(groceriesFileName);
     
     // Ensure both are correct types, not null or corrupted
-    if (!listenerList || Array.isArray(listenerList)) {
+    if (!listenerList ) {
         listenerList = [];
     }
-    if (!defaultGroceriesList || Array.isArray(defaultGroceriesList)) {
+    if (!defaultGroceriesList) {
         defaultGroceriesList = {};
     }
 
@@ -109,7 +109,6 @@ export const reload = async (client) => {
 
     // delete reacted message
     client.on(Events.MessageReactionAdd, async (reaction, user) => {
-        console.log('allo')
         // When a reaction is received, check if the structure is partial
         if (reaction.partial) {
             // If the message this reaction belongs to was removed, the fetching might result in an API error which should be handled
@@ -122,7 +121,6 @@ export const reload = async (client) => {
             }
         }
         if (user.bot) return;
-
         const message = reaction.message;
         const channelId = message.channel ? message.channel.id : message.client.id;
 

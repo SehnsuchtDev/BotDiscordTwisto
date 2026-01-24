@@ -6,7 +6,6 @@ import path from 'path';
 import { pathToFileURL, fileURLToPath } from "url";
 import moment from 'moment'
 
-
 configDotenv({ path: '../.env' });
 
 export const client = new Client({ 
@@ -79,7 +78,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     
     const command = interaction.client.commands.get(interaction.commandName);
 
-	console.log(moment().tz("Europe/Paris").format("HH:mm") + " " + interaction.user.tag + " " + interaction.commandName);
+	console.log(moment().tz("Europe/Paris").format("HH:mm") + " " + interaction.user.tag + " " + interaction.commandName + " " + (interaction.options.getSubcommand(false) ? interaction.options.getSubcommand(false) : ""));
     
     if (!command) {
         console.error(`No command matching ${interaction.commandName} was found.`);

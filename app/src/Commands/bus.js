@@ -80,7 +80,6 @@ const getStopList = async (line, stop, hour, minute) =>
         console.log("-----------------------------------------------------")
         const {departureTime, realTime, differentDays} = getDepartureData(result.horaire_depart_theorique, result.horaire_de_depart_reel, currentTime);
 
-        console.log("Departure time:", departureTime, "Current time:", currentTime, "Different days:", differentDays);
         if (departureTime.day() > currentTime.day()) continue;
 
         const comparableDepartureTime = new Date(`1970-01-01T${departureTime.format('HH:mm:ss')}`);
@@ -88,14 +87,14 @@ const getStopList = async (line, stop, hour, minute) =>
         if (comparableDepartureTime < comparableCurrentTime && !differentDays) continue;
         if (formatString(result.destination_stop_headsign) == formatString(result.nom_de_l_arret_stop_name)) continue;
 
-        //console.log(result)
-
         let tempDirection = Buffer.from(result.destination_stop_headsign, 'latin1').toString('utf8');
         if (direction == '' || direction != tempDirection)
         {
             direction = tempDirection;
             stopList.stops[direction] = [];
         }
+
+        console.log(result);
 
         const remainingTime = getRemainingTimeString(departureTime, currentTime, differentDays);
 
@@ -187,7 +186,8 @@ const getDepartureData = (date, realTimeDate, currentTime) => {
 
     if (realTimeDate != undefined && realTimeDate != date)
     {
-        let realTime = moment.utc(realTimeDate, 'HH:mm:ss').tz('Europe/Paris');
+        //let realTime = moment.utc(realTimeDate, 'HH:mm:ss').tz('Europe/Paris');
+        let realTime = moment.utc(realTimeDate, 'HH:mm:ss');
         console.log("Real-time date:", realTimeDate, "Parsed real-time:", realTime.format('HH:mm:ss'), "Theorical departure:", departureTime.format('HH:mm:ss'));
 
         if (!departureTime.isSame(realTime))

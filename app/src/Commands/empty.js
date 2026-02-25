@@ -17,14 +17,14 @@ const emptyChannel = async (interaction) =>
     const channel = interaction.channel;
     const fetchedMessages = await channel.messages.fetch();
     let message;
-    await channel.bulkDelete(fetchedMessages)
-        .then(() => {
-            message = 'Le salon a été vidé avec succès.';
-        })
-        .catch(error => {
-            console.error('Erreur lors de la suppression des messages : ', error);
+
+    await fetchedMessages.forEach(msg => {
+        msg.delete().catch(() => {
+            console.error('Erreur lors de la suppression d\'un message : ', error);
             message = 'Une erreur est survenue lors de la tentative de vider le salon.';
         });
+    });
 
+    message = 'Le salon a été vidé avec succès.';
     return message;
 }

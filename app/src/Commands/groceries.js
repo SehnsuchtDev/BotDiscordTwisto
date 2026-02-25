@@ -35,7 +35,11 @@ export const command = {
             .addSubcommand(subcommand => 
                 subcommand.setName('list')
                     .setDescription('Affiche la liste de courses par défaut')
-                ),
+                )
+            .addSubcommand(subcommand => 
+                subcommand.setName('recap')
+                    .setDescription('Affiche un récapitulatif de la liste de courses'))
+    ,
     async execute(interaction) {
         await interaction.deferReply({flags : MessageFlags.Ephemeral});
 
@@ -58,6 +62,9 @@ export const command = {
                 break;
             case "list":
                 message = await listGroceryElements(channel);
+                break;
+            case "recap":
+                message = await recapGroceryList(channel);
                 break;
         }
 
@@ -227,4 +234,19 @@ const listGroceryElements = async (channel) =>
     }
 
     return "La liste de courses par défaut a été affichée.";
+}
+
+const recapGroceryList = async (channel) => {
+    let messageList = await channel.messages.fetch();
+    if (messageList.size == 0)
+    {
+        return "Le salon est vide.";
+    }
+
+    let message = "";
+    messageList.forEach(msg => {
+        message += `- ${msg.content}\n`;
+    });
+
+    return message;
 }

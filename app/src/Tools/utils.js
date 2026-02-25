@@ -48,7 +48,6 @@ export const getRemainingTimeString = (departureTime, currentTime, differentDays
     currentTime = new Date(`1970-01-01T${currentTime.format('HH:mm:ss')}`);
 
     let difference = departureTime - currentTime;
-    console.log(departureTime, currentTime, difference);
 
     if (differentDays) {
         difference = (departureTime.getTime() + 24 * 60 * 60 * 1000) - currentTime.getTime();

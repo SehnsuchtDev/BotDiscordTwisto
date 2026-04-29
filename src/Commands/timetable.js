@@ -12,39 +12,14 @@ let intervalDurationList = {};
 export const command = {
     data : new SlashCommandBuilder()
             .setName('dispo')
-            .setDescription('Vérifie les salles informatiques disponibles')
-            .addSubcommand(subcommand => 
-                subcommand.setName('check')
-                    .setDescription('Vérifie les salles informatiques disponibles une seule fois'))
-            .addSubcommand(subcommand => 
-                subcommand.setName('start')
-                    .setDescription('Appelle la commande régulièrement')
-                    .addNumberOption(option => 
-                        option.setName('intervalle')
-                            .setDescription('Intervalle en minutes (par défaut 5 minutes)')
-                            .setRequired(false)))
-            .addSubcommand(subcommand => 
-                subcommand.setName('stop')
-                    .setDescription('Arrête la boucle')),
+            .setDescription('Vérifie les salles informatiques disponibles'),
     async execute(interaction) {
         await interaction.deferReply();
 
-        let message = "";
         const channel = interaction.channel ? interaction.channel : interaction.user;
-
         console.log("command channel id: " + (interaction.channel ? interaction.channel.id : null), interaction.user ? interaction.user.id : null);
 
-        switch (interaction.options.getSubcommand()) {
-            case "start":
-                const interval = interaction.options.getNumber('intervalle') || 5;
-                message = await setAvailableRoomsTimer(channel, false, interval);
-                break;
-            case "stop":
-                message = await stopAvailableRoomsTimer(channel);
-                break;
-            case "check":
-                message = await getAvailableRooms();
-        }
+        let message = await getAvailableRooms();
 
         await interaction.editReply({content: message});
     }
@@ -102,8 +77,6 @@ const searchRoom = async (roomId) =>
 {
     return new Promise((resolve) => {
         getScheduleForResource(roomId, (data) => {
-            // console.log(data);
-
             if (data === null)
             {
                 console.error({ time: Date.now(), data})

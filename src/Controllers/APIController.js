@@ -2,7 +2,7 @@ import pkg from 'superagent';
 const { get } = pkg;
 
 const BASE_URL_TWISTO = "https://data.twisto.fr/api/explore/v2.1/catalog/datasets/horaires-tr/records?"
-const BASE_URL_EDT = "https://edtapi.antoninhuaut.fr/v2/1/"
+const BASE_URL_EDT = "https://edtapi.antoninhuaut.fr/v3/univs/1/rooms/"
 
 export const getRealTimeSchedule = (line, stop, callback) =>
 {
@@ -42,7 +42,7 @@ export const getResourcesList = (callback) =>
 
 export const getScheduleForResource = (resourceId, callback) =>
 {
-    get(`${BASE_URL_EDT}${resourceId}/json`)
+    get(`${BASE_URL_EDT}${resourceId}/events`)
     .query()
     .end((err, res) => {
         if (err) {
